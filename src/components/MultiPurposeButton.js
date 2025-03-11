@@ -79,9 +79,9 @@ const MultiPurposeButton = ({ status, onPress }) => {
 
 const styles = StyleSheet.create({
   button: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   },
   text: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     marginTop: 8,
     textAlign: 'center',

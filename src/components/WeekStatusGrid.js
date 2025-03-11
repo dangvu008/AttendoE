@@ -69,6 +69,105 @@ const WeekStatusGrid = () => {
     }
   };
   
+  const renderWeekGrid = () => {
+    // Start from Monday (1) to Sunday (7)
+    const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+    const currentDate = new Date();
+    const startOfCurrentWeek = startOfWeek(currentDate, { weekStartsOn: 1 });
+    
+    return (
+      <View style={styles.weekContainer}>
+        {/* Day headers */}
+        <View style={styles.dayHeaderRow}>
+          {days.map((day, index) => (
+            <View key={`header-${index}`} style={styles.dayHeaderCell}>
+              <Text style={[styles.dayHeaderText, { color: index === 6 ? theme.error : theme.text }]}>
+                {day}
+              </Text>
+            </View>
+          ))}
+        </View>
+        
+        {/* Date numbers */}
+        <View style={styles.dateRow}>
+          {days.map((_, index) => {
+            const date = addDays(startOfCurrentWeek, index);
+            const dateStr = format(date, 'dd');
+            const isToday = format(date, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
+            
+            return (
+              <View key={`date-${index}`} style={styles.dateCell}>
+                <Text 
+                  style={[
+                    styles.dateText, 
+                    { color: theme.text },
+                    isToday && styles.todayText
+                  ]}
+                >
+                  {dateStr}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+        
+        {/* Status icons */}
+        <View style={styles.statusRow}>
+          {days.map((_, index) => {
+            const date = addDays(startOfCurrentWeek, index);
+            const dateStr = format(date, 'yyyy-MM-dd');
+            const dayData = weeklyData[dateStr] || { status: null };
+            const isFutureDate = date > currentDate;
+            
+            // Don't show status for future dates
+            const statusInfo = isFutureDate 
+              ? { icon: '?', color: '#9E9E9E' }
+              : getStatusIcon(dayData.status);
+            
+            return (
+              <TouchableOpacity 
+                key={`status-${index}`} 
+                style={[
+                  styles.statusCell,
+                  { borderColor: statusInfo.color + '80' }
+                ]}
+                onPress={() => handleDayPress({ date: dateStr, status: dayData })}
+                disabled={isFutureDate}
+              >
+                <Text style={[styles.statusIcon, { color: statusInfo.color }]}>
+                  {statusInfo.icon}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        
+        {/* Time row */}
+        <View style={styles.timeRow}>
+          {days.map((_, index) => {
+            const date = addDays(startOfCurrentWeek, index);
+            const dateStr = format(date, 'yyyy-MM-dd');
+            const dayData = weeklyData[dateStr] || {};
+            const isFutureDate = date > currentDate;
+            
+            // Don't show times for future dates
+            const timeText = isFutureDate 
+              ? '-\n-'
+              : `${dayData.startTime || '08:00'}\n${dayData.endTime || '20:00'}`;
+            
+            return (
+              <View key={`time-${index}`} style={styles.timeCell}>
+                <Text style={[styles.timeText, { color: theme.text }]}>
+                  {timeText}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
+  
   const renderDetailModal = () => {
     if (!selectedDay) return null;
     
@@ -93,45 +192,44 @@ const WeekStatusGrid = () => {
                 {t('status.label')}:
               </Text>
               <View style={[styles.statusBadge, { backgroundColor: statusInfo.color + '30' }]}>
-                <Text style={[styles.statusIcon, { color: statusInfo.color }]}>
-                  {statusInfo.icon}
-                </Text>
                 <Text style={[styles.statusText, { color: statusInfo.color }]}>
                   {t(`status.${status.status || 'not_started'}`)}
                 </Text>
               </View>
             </View>
             
-            {status.goWorkTime && (
-              <View style={styles.timeRow}>
-                <Ionicons name="walk-outline" size={20} color={theme.text} />
-                <Text style={[styles.timeText, { color: theme.text }]}>
-                  {t('status.go_work')}: {format(new Date(status.goWorkTime), 'HH:mm')}
-                </Text>
-              </View>
-            )}
+            <View style={styles.timeDetails}>
+              {status.goWorkTime && (
+                <View style={styles.timeItem}>
+                  <Ionicons name="walk-outline" size={20} color={theme.text} />
+                  <Text style={[styles.timeItemText, { color: theme.text }]}>
+                    {t('status.go_work')}: {format(new Date(status.goWorkTime), 'HH:mm')}
+                  </Text>
+                </View>
+              )}
+              
+              {status.checkInTime && (
+                <View style={styles.timeItem}>
+                  <Ionicons name="log-in-outline" size={20} color={theme.text} />
+                  <Text style={[styles.timeItemText, { color: theme.text }]}>
+                    {t('status.check_in')}: {format(new Date(status.checkInTime), 'HH:mm')}
+                  </Text>
+                </View>
+              )}
+              
+              {status.checkOutTime && (
+                <View style={styles.timeItem}>
+                  <Ionicons name="log-out-outline" size={20} color={theme.text} />
+                  <Text style={[styles.timeItemText, { color: theme.text }]}>
+                    {t('status.check_out')}: {format(new Date(status.checkOutTime), 'HH:mm')}
+                  </Text>
+                </View>
+              )}
+            </View>
             
-            {status.checkInTime && (
-              <View style={styles.timeRow}>
-                <Ionicons name="log-in-outline" size={20} color={theme.text} />
-                <Text style={[styles.timeText, { color: theme.text }]}>
-                  {t('status.check_in')}: {format(new Date(status.checkInTime), 'HH:mm')}
-                </Text>
-              </View>
-            )}
-            
-            {status.checkOutTime && (
-              <View style={styles.timeRow}>
-                <Ionicons name="log-out-outline" size={20} color={theme.text} />
-                <Text style={[styles.timeText, { color: theme.text }]}>
-                  {t('status.check_out')}: {format(new Date(status.checkOutTime), 'HH:mm')}
-                </Text>
-              </View>
-            )}
-            
-            <View style={styles.modalButtonRow}>
+            <View style={styles.modalButtonsContainer}>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.changeStatusButton, { backgroundColor: theme.primary }]}
+                style={[styles.modalButton, { backgroundColor: theme.primary }]}
                 onPress={handleStatusPress}
               >
                 <Text style={styles.modalButtonText}>
@@ -140,10 +238,10 @@ const WeekStatusGrid = () => {
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.modalButton, styles.closeButton, { borderColor: theme.border }]}
+                style={[styles.modalButton, { backgroundColor: theme.border }]}
                 onPress={() => setDetailModalVisible(false)}
               >
-                <Text style={[styles.closeButtonText, { color: theme.text }]}>
+                <Text style={styles.modalButtonText}>
                   {t('close')}
                 </Text>
               </TouchableOpacity>
@@ -154,15 +252,14 @@ const WeekStatusGrid = () => {
     );
   };
   
-  const renderStatusModal = () => {
-    const statuses = [
-      { value: STATUS_TYPES.COMPLETE, label: t('status.complete') },
-      { value: STATUS_TYPES.ABSENT, label: t('status.absent') },
-      { value: STATUS_TYPES.LEAVE, label: t('status.leave') },
-      { value: STATUS_TYPES.SICK, label: t('status.sick') },
-      { value: STATUS_TYPES.HOLIDAY, label: t('status.holiday') },
-      { value: STATUS_TYPES.LATE_OR_EARLY, label: t('status.late_or_early') },
-      { value: STATUS_TYPES.NOT_STARTED, label: t('status.not_started') },
+  const renderStatusSelectionModal = () => {
+    const statusOptions = [
+      { status: STATUS_TYPES.COMPLETE, label: t('status.complete') },
+      { status: STATUS_TYPES.ABSENT, label: t('status.absent') },
+      { status: STATUS_TYPES.LEAVE, label: t('status.leave') },
+      { status: STATUS_TYPES.SICK, label: t('status.sick') },
+      { status: STATUS_TYPES.HOLIDAY, label: t('status.holiday') },
+      { status: STATUS_TYPES.LATE_OR_EARLY, label: t('status.late_or_early') },
     ];
     
     return (
@@ -178,24 +275,32 @@ const WeekStatusGrid = () => {
               {t('select_status')}
             </Text>
             
-            {statuses.map((status) => (
-              <TouchableOpacity
-                key={status.value}
-                style={[styles.statusOption, { borderBottomColor: theme.border }]}
-                onPress={() => handleStatusSelection(status.value)}
-              >
-                <Text style={[styles.statusOptionText, { color: theme.text }]}>
-                  {status.label}
-                </Text>
-                <View style={[styles.statusIndicator, { backgroundColor: getStatusIcon(status.value).color }]} />
-              </TouchableOpacity>
-            ))}
+            <View style={styles.statusOptionsContainer}>
+              {statusOptions.map((option, index) => {
+                const statusInfo = getStatusIcon(option.status);
+                
+                return (
+                  <TouchableOpacity 
+                    key={index}
+                    style={[styles.statusOption, { borderColor: theme.border }]}
+                    onPress={() => handleStatusSelection(option.status)}
+                  >
+                    <Text style={[styles.statusOptionIcon, { color: statusInfo.color }]}>
+                      {statusInfo.icon}
+                    </Text>
+                    <Text style={[styles.statusOptionText, { color: theme.text }]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
             
             <TouchableOpacity 
-              style={[styles.modalButton, styles.closeButton, { borderColor: theme.border, marginTop: 16 }]}
+              style={[styles.modalButton, { backgroundColor: theme.border }]}
               onPress={() => setStatusModalVisible(false)}
             >
-              <Text style={[styles.closeButtonText, { color: theme.text }]}>
+              <Text style={styles.modalButtonText}>
                 {t('cancel')}
               </Text>
             </TouchableOpacity>
@@ -207,193 +312,162 @@ const WeekStatusGrid = () => {
   
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
-        {weeklyData.map((day, index) => (
-          <Text 
-            key={`header-${index}`} 
-            style={[styles.dayHeader, { color: theme.text }]}
-          >
-            {t(`weekdays.short.${index}`)}
-          </Text>
-        ))}
-      </View>
-      
-      <View style={styles.daysRow}>
-        {weeklyData.map((day, index) => {
-          const dayDate = new Date(day.date);
-          const isToday = format(today, 'yyyy-MM-dd') === format(dayDate, 'yyyy-MM-dd');
-          const isFuture = dayDate > today;
-          const statusInfo = getStatusIcon(day.status?.status);
-          
-          return (
-            <TouchableOpacity
-              key={`day-${index}`}
-              style={[
-                styles.dayCell,
-                isToday && styles.todayCell,
-                { 
-                  borderColor: isToday ? theme.primary : theme.border,
-                  backgroundColor: isToday ? theme.primary + '20' : 'transparent' 
-                }
-              ]}
-              onPress={() => handleDayPress(day)}
-              disabled={isFuture}
-            >
-              <Text style={[styles.dayNumber, { color: theme.text, opacity: isFuture ? 0.5 : 1 }]}>
-                {format(dayDate, 'd')}
-              </Text>
-              <Text 
-                style={[
-                  styles.statusSymbol, 
-                  { color: isFuture ? '#9E9E9E' : statusInfo.color }
-                ]}
-              >
-                {isFuture ? '--' : statusInfo.icon}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-      
+      {renderWeekGrid()}
       {renderDetailModal()}
-      {renderStatusModal()}
+      {renderStatusSelectionModal()}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 8,
+    width: '100%',
   },
-  headerRow: {
+  weekContainer: {
+    width: '100%',
+  },
+  dayHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  dayHeader: {
+  dayHeaderCell: {
     flex: 1,
-    textAlign: 'center',
+    alignItems: 'center',
+  },
+  dayHeaderText: {
     fontWeight: 'bold',
     fontSize: 14,
   },
-  daysRow: {
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  dateCell: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+  },
+  todayText: {
+    fontWeight: 'bold',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  statusCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 40,
+    borderWidth: 2,
+    borderRadius: 20,
+    marginHorizontal: 2,
+  },
+  statusIcon: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  dayCell: {
+  timeCell: {
     flex: 1,
-    height: 70,
-    margin: 2,
-    borderWidth: 1,
-    borderRadius: 8,
-    justifyContent: 'center',
     alignItems: 'center',
   },
-  todayCell: {
-    borderWidth: 2,
-  },
-  dayNumber: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  statusSymbol: {
-    fontSize: 18,
-    marginTop: 4,
-    fontWeight: 'bold',
+  timeText: {
+    fontSize: 12,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
   },
   modalContainer: {
     width: '90%',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
     borderWidth: 1,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 15,
     textAlign: 'center',
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 15,
   },
   statusLabel: {
     fontSize: 16,
-    marginRight: 8,
+    marginRight: 10,
   },
   statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 16,
-  },
-  statusIcon: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 4,
   },
   statusText: {
-    fontSize: 14,
     fontWeight: 'bold',
+    marginLeft: 5,
   },
-  timeRow: {
+  timeDetails: {
+    marginBottom: 15,
+  },
+  timeItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
-  timeText: {
+  timeItemText: {
     marginLeft: 8,
-    fontSize: 14,
   },
-  modalButtonRow: {
+  modalButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 5,
     alignItems: 'center',
-  },
-  changeStatusButton: {
-    marginRight: 8,
+    marginHorizontal: 5,
   },
   modalButtonText: {
     color: 'white',
     fontWeight: 'bold',
   },
-  closeButton: {
-    borderWidth: 1,
-    marginLeft: 8,
-  },
-  closeButtonText: {
-    fontWeight: 'bold',
+  statusOptionsContainer: {
+    marginBottom: 15,
   },
   statusOption: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
+  },
+  statusOptionIcon: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginRight: 10,
+    width: 30,
+    textAlign: 'center',
   },
   statusOptionText: {
     fontSize: 16,
-  },
-  statusIndicator: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
   },
 });
 

@@ -54,7 +54,7 @@ const NoteCard = ({ note, onEdit }) => {
   };
   
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, borderColor: theme.border }]}>
+    <View style={[styles.container, { backgroundColor: theme.mode === 'dark' ? '#1E1E1E' : '#F5F5F5', borderColor: theme.border }]}>
       <TouchableOpacity 
         style={styles.contentContainer}
         onPress={() => setExpanded(!expanded)}
@@ -107,8 +107,8 @@ const NoteCard = ({ note, onEdit }) => {
 const styles = StyleSheet.create({
   container: {
     borderRadius: 8,
-    borderWidth: 1,
     marginBottom: 12,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   contentContainer: {
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 4,
   },
   title: {
@@ -142,15 +142,16 @@ const styles = StyleSheet.create({
   },
   content: {
     fontSize: 14,
+    lineHeight: 20,
   },
   actionContainer: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
+    borderTopColor: '#E0E0E0',
   },
   actionButton: {
     flex: 1,
-    padding: 8,
+    paddingVertical: 8,
     alignItems: 'center',
   },
 });

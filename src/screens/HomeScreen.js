@@ -6,7 +6,8 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Alert, 
-  FlatList
+  FlatList,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -34,6 +35,7 @@ const HomeScreen = ({ navigation }) => {
   const [buttonState, setButtonState] = useState(todayStatus.status);
   const [todayShift, setTodayShift] = useState(null);
   const [recentNotes, setRecentNotes] = useState([]);
+  const [buttonHistory, setButtonHistory] = useState([]);
 
   useEffect(() => {
     // Update current time every minute
@@ -52,6 +54,31 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     setButtonState(todayStatus.status);
+    
+    // Update button history when status changes
+    if (todayStatus.goWorkTime && !buttonHistory.find(h => h.type === 'go_work')) {
+      setButtonHistory(prev => [...prev, {
+        type: 'go_work',
+        time: todayStatus.goWorkTime,
+        label: t('status.go_work')
+      }]);
+    }
+    
+    if (todayStatus.checkInTime && !buttonHistory.find(h => h.type === 'check_in')) {
+      setButtonHistory(prev => [...prev, {
+        type: 'check_in',
+        time: todayStatus.checkInTime,
+        label: t('status.check_in')
+      }]);
+    }
+    
+    if (todayStatus.checkOutTime && !buttonHistory.find(h => h.type === 'check_out')) {
+      setButtonHistory(prev => [...prev, {
+        type: 'check_out',
+        time: todayStatus.checkOutTime,
+        label: t('status.check_out')
+      }]);
+    }
   }, [todayStatus]);
 
   useEffect(() => {
@@ -127,6 +154,7 @@ const HomeScreen = ({ navigation }) => {
             const success = await resetTodayStatus();
             if (success) {
               setButtonState(STATUS_TYPES.NOT_STARTED);
+              setButtonHistory([]);
             }
           }
         },
@@ -139,82 +167,96 @@ const HomeScreen = ({ navigation }) => {
     return format(new Date(isoString), 'HH:mm');
   };
 
+  const formatDate = (date) => {
+    const day = format(date, 'EEEE');
+    const dayOfMonth = format(date, 'dd/MM');
+    return { day, dayOfMonth };
+  };
+
   const renderStatusTimeline = () => {
+    if (buttonHistory.length === 0) {
+      return (
+        <View style={styles.timelineContainer}>
+          <Text style={[styles.noStatusText, { color: theme.text }]}>
+            {t('status.not_started')}
+          </Text>
+        </View>
+      );
+    }
+    
     return (
       <View style={styles.timelineContainer}>
-        {todayStatus.goWorkTime && (
-          <View style={styles.timelineItem}>
-            <Ionicons name="walk-outline" size={20} color={theme.text} />
+        {buttonHistory.map((item, index) => (
+          <View key={index} style={styles.timelineItem}>
+            <Ionicons 
+              name={getIconForStatus(item.type)} 
+              size={20} 
+              color={theme.text} 
+            />
             <Text style={[styles.timelineText, { color: theme.text }]}>
-              {t('status.go_work')}: {formatTime(todayStatus.goWorkTime)}
+              {item.label}: {formatTime(item.time)}
             </Text>
           </View>
-        )}
-        
-        {todayStatus.checkInTime && (
-          <View style={styles.timelineItem}>
-            <Ionicons name="log-in-outline" size={20} color={theme.text} />
-            <Text style={[styles.timelineText, { color: theme.text }]}>
-              {t('status.check_in')}: {formatTime(todayStatus.checkInTime)}
-            </Text>
-          </View>
-        )}
-        
-        {todayStatus.checkOutTime && (
-          <View style={styles.timelineItem}>
-            <Ionicons name="log-out-outline" size={20} color={theme.text} />
-            <Text style={[styles.timelineText, { color: theme.text }]}>
-              {t('status.check_out')}: {formatTime(todayStatus.checkOutTime)}
-            </Text>
-          </View>
-        )}
-        
-        {todayStatus.completeTime && (
-          <View style={styles.timelineItem}>
-            <Ionicons name="checkmark-done-outline" size={20} color={theme.text} />
-            <Text style={[styles.timelineText, { color: theme.text }]}>
-              {t('status.complete')}: {formatTime(todayStatus.completeTime)}
-            </Text>
-          </View>
-        )}
+        ))}
       </View>
     );
   };
+
+  const getIconForStatus = (status) => {
+    switch (status) {
+      case 'go_work':
+        return 'walk-outline';
+      case 'check_in':
+        return 'log-in-outline';
+      case 'check_out':
+        return 'log-out-outline';
+      case 'complete':
+        return 'checkmark-done-outline';
+      default:
+        return 'help-circle-outline';
+    }
+  };
+
+  const { day, dayOfMonth } = formatDate(currentTime);
 
   return (
     <ScrollView 
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.contentContainer}
     >
-      {/* Current Date and Time */}
-      <View style={styles.dateTimeContainer}>
-        <Text style={[styles.date, { color: theme.text }]}>
-          {format(currentTime, 'EEEE, dd/MM/yyyy')}
-        </Text>
-        <Text style={[styles.time, { color: theme.text }]}>
-          {format(currentTime, 'HH:mm')}
-        </Text>
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: theme.text }]}>Time Manager</Text>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+            <Ionicons name="settings-outline" size={24} color={theme.text} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.statsIcon}>
+            <Ionicons name="stats-chart-outline" size={24} color={theme.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Current Shift Info */}
-      <View style={[styles.shiftContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
-          {t('current_shift')}
-        </Text>
-        {todayShift ? (
-          <View>
-            <Text style={[styles.shiftName, { color: theme.text }]}>
-              {todayShift.name}
-            </Text>
-            <Text style={[styles.shiftTime, { color: theme.text }]}>
-              {todayShift.startTime} - {todayShift.endTime}
-            </Text>
-          </View>
-        ) : (
-          <Text style={[styles.noShift, { color: theme.text }]}>
-            No shift scheduled for today
+      {/* Current Date and Time */}
+      <View style={styles.mainContent}>
+        <View style={styles.dateTimeContainer}>
+          <Text style={[styles.time, { color: theme.text }]}>
+            {format(currentTime, 'HH:mm')}
           </Text>
-        )}
+          <Text style={[styles.date, { color: theme.text }]}>
+            {t(`weekdays.${format(currentTime, 'EEEE').toLowerCase()}`)} {format(currentTime, 'dd/MM')}
+          </Text>
+        </View>
+
+        {/* Current Shift Info */}
+        <View style={[styles.shiftContainer, { backgroundColor: theme.mode === 'dark' ? '#1E1E1E' : '#F5F5F5', borderColor: theme.border }]}>
+          <Ionicons name="calendar-outline" size={24} color={theme.primary} />
+          <Text style={[styles.shiftLabel, { color: theme.text }]}>
+            {t('current_shift')}
+          </Text>
+          <Text style={[styles.shiftTime, { color: theme.text }]}>
+            {todayShift ? `${todayShift.startTime} → ${todayShift.endTime}` : '--:-- → --:--'}
+          </Text>
+        </View>
       </View>
 
       {/* Multi-Purpose Button and Status Timeline */}
@@ -239,7 +281,7 @@ const HomeScreen = ({ navigation }) => {
       </View>
 
       {/* Weekly Status Grid */}
-      <View style={[styles.weekStatusContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <View style={[styles.weekStatusContainer, { backgroundColor: theme.mode === 'dark' ? '#1E1E1E' : '#F5F5F5', borderColor: theme.border }]}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>
           {t('weekly_status')}
         </Text>
@@ -247,7 +289,7 @@ const HomeScreen = ({ navigation }) => {
       </View>
 
       {/* Work Notes */}
-      <View style={[styles.notesContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <View style={styles.notesSection}>
         <View style={styles.noteHeaderContainer}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
             {t('notes')}
@@ -292,42 +334,56 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
   },
-  dateTimeContainer: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
   },
-  date: {
-    fontSize: 18,
+  title: {
+    fontSize: 24,
     fontWeight: 'bold',
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statsIcon: {
+    marginLeft: 16,
+  },
+  mainContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+  },
+  dateTimeContainer: {
+    alignItems: 'flex-start',
+  },
+  date: {
+    fontSize: 16,
   },
   time: {
     fontSize: 36,
     fontWeight: 'bold',
   },
   shiftContainer: {
-    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
     borderRadius: 8,
-    marginBottom: 20,
     borderWidth: 1,
   },
-  sectionTitle: {
-    fontSize: 18,
+  shiftLabel: {
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  shiftName: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    marginHorizontal: 8,
   },
   shiftTime: {
     fontSize: 16,
   },
-  noShift: {
-    fontSize: 16,
-    fontStyle: 'italic',
-  },
   actionContainer: {
-    marginBottom: 20,
+    marginBottom: 30,
+    alignItems: 'center',
   },
   buttonContainer: {
     position: 'relative',
@@ -337,12 +393,15 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 20,
     padding: 8,
   },
   timelineContainer: {
     marginTop: 10,
+    alignItems: 'center',
   },
   timelineItem: {
     flexDirection: 'row',
@@ -353,16 +412,24 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
   },
+  noStatusText: {
+    fontStyle: 'italic',
+    textAlign: 'center',
+    padding: 16,
+  },
   weekStatusContainer: {
     padding: 16,
     borderRadius: 8,
     marginBottom: 20,
     borderWidth: 1,
   },
-  notesContainer: {
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  notesSection: {
+    marginBottom: 20,
   },
   noteHeaderContainer: {
     flexDirection: 'row',
