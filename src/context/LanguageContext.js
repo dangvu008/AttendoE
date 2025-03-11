@@ -1,10 +1,18 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
 import { I18n } from 'i18n-js';
 import { vi, en } from '../localization';
 
 export const LanguageContext = createContext();
+
+export const useLocale = () => {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    throw new Error('useLocale must be used within a LanguageProvider');
+  }
+  return context;
+};
 
 const translations = {
   en,
